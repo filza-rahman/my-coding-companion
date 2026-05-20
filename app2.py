@@ -3,6 +3,8 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 from textblob import TextBlob
+from groq import Groq
+import os
 
 st.set_page_config(
     page_title="The Coding Companion",
@@ -139,6 +141,30 @@ html, body, [class*="css"] {
     font-style: italic;
 }
 
+/* ── AI Companion Response Card ── */
+.ai-card {
+    background: linear-gradient(135deg, #fffaf6, #fdf3e7);
+    border: 1px solid #d4a855;
+    border-radius: 12px;
+    padding: 1.4rem 1.8rem;
+    margin-top: 1.2rem;
+}
+.ai-card-header {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #c9956a;
+    margin-bottom: 0.6rem;
+}
+.ai-card-body {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 1.05rem;
+    color: #3a2a1a;
+    line-height: 1.8;
+}
+
 /* ── Inputs ── */
 .stTextInput label, .stTextArea label {
     font-family: 'EB Garamond', Georgia, serif !important;
@@ -221,9 +247,9 @@ html, body, [class*="css"] {
     margin-top: 0.9rem;
     font-style: italic;
 }
-.vibe-good { background: #fdf0ea; color: #a0522d; border: 1px solid #d4a855; }
-.vibe-meh  { background: #fdf3e7; color: #8b6914; border: 1px solid #c8a44a; }
-.vibe-hard { background: #fdf0f3; color: #8b3a4a; border: 1px solid #e8a0b0; }
+.vibe-good  { background: #fdf0ea; color: #a0522d; border: 1px solid #d4a855; }
+.vibe-meh   { background: #fdf3e7; color: #8b6914; border: 1px solid #c8a44a; }
+.vibe-hard  { background: #fdf0f3; color: #8b3a4a; border: 1px solid #e8a0b0; }
 
 /* ── Metrics ── */
 [data-testid="metric-container"] {
@@ -233,9 +259,7 @@ html, body, [class*="css"] {
     padding: 1.2rem 1rem !important;
     text-align: center !important;
 }
-[data-testid="metric-container"] * {
-    color: #2c1a0e !important;
-}
+[data-testid="metric-container"] * { color: #2c1a0e !important; }
 [data-testid="metric-container"] label {
     font-family: 'EB Garamond', Georgia, serif !important;
     font-size: 0.72rem !important;
@@ -254,13 +278,8 @@ html, body, [class*="css"] {
     font-family: 'EB Garamond', Georgia, serif !important;
     color: #7a5a1e !important;
 }
-[data-testid="stMetricDelta"] * {
-    color: #7a5a1e !important;
-    fill: #7a5a1e !important;
-}
-[data-testid="stMetricDelta"] svg {
-    display: none !important;
-}
+[data-testid="stMetricDelta"] * { color: #7a5a1e !important; fill: #7a5a1e !important; }
+[data-testid="stMetricDelta"] svg { display: none !important; }
 
 /* ── Section label ── */
 .section-label {
@@ -301,6 +320,59 @@ html, body, [class*="css"] {
 }
 </style>
 """, unsafe_allow_html=True)
+
+# ── Groq Setup ──
+def get_groq_client():
+    api_key = os.environ.get("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY", None)
+    if not api_key:
+        return None
+    return Groq(api_key=api_key)
+
+def groq_generate(prompt: str) -> str:
+    client = get_groq_client()
+    if not client:
+        return "(Add your GROQ_API_KEY to use the AI companion.)"
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=300
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"(Couldn't reach your AI companion right now — {str(e)})"
+
+def get_ai_response(topic: str, reflection: str, vibe_label: str) -> str:
+    prompt = f"""You are a warm, encouraging coding mentor responding to a student's daily coding journal entry.
+The student was studying: {topic}
+Their vibe today was: {vibe_label}
+Their reflection: {reflection}
+
+Write a short, genuine response (3-5 sentences max). Be specific to what they studied.
+- If they were struggling, be empathetic and offer one concrete, practical tip.
+- If they were doing well, celebrate it and add one small "next step" idea to keep momentum.
+- If they were steady/neutral, acknowledge the grind and affirm that consistent effort compounds.
+Keep the tone warm and human, not corporate or overly enthusiastic. No bullet points. No headers. Just speak to them directly."""
+    return groq_generate(prompt)
+
+def get_ai_weekly_summary(df: pd.DataFrame) -> str:
+    recent = df.tail(7)
+    entries_text = "\n".join(
+        f"- [{row['date']}] Topic: {row['topic']} | Vibe: {row['mindset_label']} | Notes: {row['log_text'][:200]}"
+        for _, row in recent.iterrows()
+    )
+    prompt = f"""You are a thoughtful coding mentor reviewing a student's recent journal entries.
+Here are their last {len(recent)} sessions:
+
+{entries_text}
+
+Write a short, insightful summary (4-6 sentences) of:
+1. What topics they've been spending time on
+2. Any emotional patterns you notice (burnout risk? consistent positivity? specific triggers for frustration?)
+3. One gentle, actionable suggestion for their next week
+
+Be warm, specific, and honest — not generic. No bullet points. Speak directly to them."""
+    return groq_generate(prompt)
 
 # ── Database ──
 conn = sqlite3.connect("study_mindset_tracker.db", check_same_thread=False)
@@ -383,7 +455,20 @@ with tab1:
 
             st.balloons()
             st.success("Entry saved to your journal.")
-            st.markdown(f'<div class="vibe-badge {badge_class}">{badge_icon} {label}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="vibe-badge {badge_class}">{badge_icon} {label}</div>',
+                unsafe_allow_html=True
+            )
+
+            # ── AI Companion Response ──
+            with st.spinner("Your companion is thinking..."):
+                ai_reply = get_ai_response(topic, log_text, label)
+            st.markdown(f"""
+            <div class="ai-card">
+                <div class="ai-card-header">✦ your companion says</div>
+                <div class="ai-card-body">{ai_reply}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
 with tab2:
     df = pd.read_sql_query("SELECT * FROM mindset_logs", conn)
@@ -422,6 +507,18 @@ with tab2:
             vibe_counts = df["mindset_label"].value_counts().reset_index()
             vibe_counts.columns = ["Vibe", "Count"]
             st.bar_chart(vibe_counts.set_index("Vibe"), color="#f2c4a0")
+
+        if total_entries >= 3:
+            st.markdown('<div class="section-label">✦ AI Pattern Summary</div>', unsafe_allow_html=True)
+            if st.button("Generate my AI summary ✨"):
+                with st.spinner("Reading your journey..."):
+                    summary = get_ai_weekly_summary(df)
+                st.markdown(f"""
+                <div class="ai-card">
+                    <div class="ai-card-header">✦ your companion's read on your journey</div>
+                    <div class="ai-card-body">{summary}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
 with tab3:
     df_vault = pd.read_sql_query(
