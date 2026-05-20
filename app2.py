@@ -19,8 +19,19 @@ html, body, [class*="css"] {
 }
 
 .stApp {
-    background: #fdf6f0;
-    color: #3a2a1a;
+    background: #fdf6f0 !important;
+    color: #3a2a1a !important;
+}
+
+/* Force light mode regardless of device theme */
+@media (prefers-color-scheme: dark) {
+    .stApp { background: #fdf6f0 !important; color: #3a2a1a !important; }
+    [data-testid="metric-container"] { background: #faeee4 !important; color: #2c1a0e !important; }
+    [data-testid="metric-container"] * { color: #2c1a0e !important; }
+    [data-testid="stMetricValue"] { color: #2c1a0e !important; }
+    [data-testid="stMetricLabel"] { color: #9e7a5a !important; }
+    [data-testid="stMetricDelta"] { color: #7a5a1e !important; }
+    [data-testid="stMetricDelta"] * { color: #7a5a1e !important; }
 }
 
 #MainMenu, footer, header { visibility: hidden; }
