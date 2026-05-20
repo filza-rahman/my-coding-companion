@@ -376,22 +376,10 @@ Be warm, specific, and honest — not generic. No bullet points. Speak directly 
     return groq_generate(prompt)
 
 # ── Anonymous User ID ──
-from streamlit_cookies_manager import EncryptedCookieManager
-import uuid
+if "user_id" not in st.session_state:
+    st.session_state.user_id = str(uuid.uuid4())
 
-cookies = EncryptedCookieManager(
-    prefix="coding_companion_",
-    password="anything_random_here"
-)
-
-if not cookies.ready():
-    st.stop()
-
-if "user_id" not in cookies:
-    cookies["user_id"] = str(uuid.uuid4())
-    cookies.save()
-
-user_id = cookies["user_id"]
+user_id = st.session_state.user_id
 
 # ── Database ──
 conn = sqlite3.connect("study_mindset_tracker.db", check_same_thread=False)
