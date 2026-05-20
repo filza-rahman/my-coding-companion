@@ -1,4 +1,5 @@
 import streamlit as st
+import uuid
 import sqlite3
 import pandas as pd
 from datetime import datetime
@@ -374,14 +375,29 @@ Write a short, insightful summary (4-6 sentences) of:
 Be warm, specific, and honest — not generic. No bullet points. Speak directly to them."""
     return groq_generate(prompt)
 
+# ── Anonymous User ID ──
+if "user_id" not in st.session_state:
+    st.session_state.user_id = str(uuid.uuid4())
+
+user_id = st.session_state.user_id
+
 # ── Database ──
 conn = sqlite3.connect("study_mindset_tracker.db", check_same_thread=False)
 cursor = conn.cursor()
+
+cursor.execute("DROP TABLE IF EXISTS mindset_logs")
+
 cursor.execute("""
-    CREATE TABLE IF NOT EXISTS mindset_logs (
-        date TEXT, topic TEXT, log_text TEXT, sentiment_score REAL, mindset_label TEXT
+    CREATE TABLE mindset_logs (
+        user_id TEXT,
+        date TEXT,
+        topic TEXT,
+        log_text TEXT,
+        sentiment_score REAL,
+        mindset_label TEXT
     )
 """)
+
 conn.commit()
 
 # ── Hero ──
@@ -448,9 +464,10 @@ with tab1:
 
             timestamp = datetime.now().strftime("%Y-%m-%d")
             cursor.execute(
-                "INSERT INTO mindset_logs VALUES (?, ?, ?, ?, ?)",
-                (timestamp, topic, log_text, score, label)
+                  "INSERT INTO mindset_logs VALUES (?, ?, ?, ?, ?, ?)",
+                  (user_id, timestamp, topic, log_text, score, label)
             )
+
             conn.commit()
 
             st.balloons()
@@ -471,7 +488,11 @@ with tab1:
             """, unsafe_allow_html=True)
 
 with tab2:
-    df = pd.read_sql_query("SELECT * FROM mindset_logs", conn)
+    df = pd.read_sql_query(
+        "SELECT * FROM mindset_logs WHERE user_id = ?",
+        conn,
+        params=(user_id,)
+    )
 
     if df.empty:
         st.markdown("""
@@ -523,12 +544,16 @@ with tab2:
 with tab3:
     df_vault = pd.read_sql_query(
         """SELECT date as Date,
-                  topic as 'What You Studied',
-                  mindset_label as 'Vibe',
-                  log_text as 'Your Notes'
-           FROM mindset_logs ORDER BY date DESC""",
-        conn
-    )
+              topic as 'What You Studied',
+              mindset_label as 'Vibe',
+              log_text as 'Your Notes'
+       FROM mindset_logs
+       WHERE user_id = ?
+       ORDER BY date DESC""",
+    conn,
+    params=(user_id,)
+    
+)
 
     if df_vault.empty:
         st.markdown("""
