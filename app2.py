@@ -385,10 +385,8 @@ user_id = st.session_state.user_id
 conn = sqlite3.connect("study_mindset_tracker.db", check_same_thread=False)
 cursor = conn.cursor()
 
-cursor.execute("DROP TABLE IF EXISTS mindset_logs")
-
 cursor.execute("""
-    CREATE TABLE mindset_logs (
+    CREATE TABLE IF NOT EXISTS mindset_logs (
         user_id TEXT,
         date TEXT,
         topic TEXT,
