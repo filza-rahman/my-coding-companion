@@ -2,4 +2,3 @@ streamlit
 pandas
 textblob
 groq
-streamlit-cookies-manager
