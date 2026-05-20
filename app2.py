@@ -222,6 +222,9 @@ html, body, [class*="css"] {
     padding: 1.2rem 1rem !important;
     text-align: center !important;
 }
+[data-testid="metric-container"] * {
+    color: #2c1a0e !important;
+}
 [data-testid="metric-container"] label {
     font-family: 'EB Garamond', Georgia, serif !important;
     font-size: 0.72rem !important;
@@ -238,7 +241,14 @@ html, body, [class*="css"] {
 [data-testid="stMetricDelta"] {
     font-size: 0.8rem !important;
     font-family: 'EB Garamond', Georgia, serif !important;
-    color: #c9956a !important;
+    color: #7a5a1e !important;
+}
+[data-testid="stMetricDelta"] * {
+    color: #7a5a1e !important;
+    fill: #7a5a1e !important;
+}
+[data-testid="stMetricDelta"] svg {
+    display: none !important;
 }
 
 /* ── Section label ── */
