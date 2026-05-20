@@ -383,6 +383,11 @@ cursor.execute("""
     )
 """)
 conn.commit()
+# TEMPORARY DELETE
+cursor.execute("DELETE FROM mindset_logs")
+conn.commit()
+
+st.write("All responses deleted.")
 
 # ── Hero ──
 st.markdown("""
