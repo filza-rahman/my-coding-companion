@@ -566,3 +566,4 @@ with tab3:
     else:
         st.markdown(f'<div class="section-label">{len(df_vault)} entries</div>', unsafe_allow_html=True)
         st.dataframe(df_vault, use_container_width=True, hide_index=True)
+
