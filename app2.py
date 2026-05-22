@@ -180,6 +180,7 @@ html, body, [class*="css"] {
     border: 1px solid #e8cdb5 !important;
     border-radius: 8px !important;
     color: #2c1a0e !important;
+    caret-color: #2c1a0e !important;  
     font-family: 'EB Garamond', Georgia, serif !important;
     font-size: 1rem !important;
     transition: border-color 0.2s !important;
